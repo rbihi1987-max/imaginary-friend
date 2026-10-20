@@ -1,5 +1,5 @@
 name: dialog_ai
-description: DialogAI v2 Final - Companeros Virtuales Realistas - Avatar Editor Flamenco - Photo Video Editor + Live Brain + Encrypted Memory
+description: DialogAI v2 Final - Companeros Virtuales Flamenco + Avatar Editor + Photo Video Editor Live Brain
 publish_to: 'none'
 version: 2.0.0+21
 environment:
@@ -11,7 +11,7 @@ dependencies:
   http: ^1.2.2
   shared_preferences: ^2.3.2
   image_picker: ^1.0.8
-  flutter_tts: ^4.2.0
-  speech_to_text: ^7.0.0
+  flutter_tts: ^4.0.2
+  speech_to_text: ^6.6.0
 flutter:
   uses-material-design: true
