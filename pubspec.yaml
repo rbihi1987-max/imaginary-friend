@@ -1,0 +1,17 @@
+name: imaginary_friend
+description: Imaginary Friend - Ultimate v2 - Photo Video Editor + Live Brain + Real Call + Full Memory
+publish_to: 'none'
+version: 2.0.0+12
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^1.2.0
+  shared_preferences: ^2.2.2
+  image_picker: ^1.0.7
+  flutter_tts: ^4.0.2
+  speech_to_text: ^6.6.0
+  cupertino_icons: ^1.0.2
+flutter:
+  uses-material-design: true
