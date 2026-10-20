@@ -1,4 +1,4 @@
-name: Build Imaginary Friend Fixed APK
+name: Build DialogAI Final APK
 on: [push, workflow_dispatch]
 jobs:
   build:
@@ -7,16 +7,17 @@ jobs:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.22.3'
+          flutter-version: '3.24.5'
           channel: 'stable'
-      - name: Create Android project if missing (Fixes build fail)
+      - name: Create Android project
         run: |
           if [ ! -d "android" ]; then
-            flutter create . --org com.imaginary.friend --project-name imaginary_friend --platforms=android
+            flutter create . --org com.dialog.ai --project-name dialog_ai --platforms=android
           fi
+      - run: flutter clean
       - run: flutter pub get
       - run: flutter build apk --release --no-tree-shake-icons
       - uses: actions/upload-artifact@v4
         with:
-          name: Imaginary-Friend-Fixed-APK
+          name: DialogAI-Final-APK
           path: build/app/outputs/flutter-apk/app-release.apk
