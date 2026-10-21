@@ -1,28 +1,36 @@
-name: Build DialogAI Final APK
-on: [push, workflow_dispatch]
+name: build
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.5'
+          flutter-version: '3.24.0'
           channel: 'stable'
-      - name: Create Android project if missing
-        run: |
-          if [ ! -d "android" ]; then
-            flutter create . --org com.dialog.ai --project-name dialog_ai --platforms=android --no-pub
-          fi
-      - name: Fix SDK 35 as required by flutter_plugin_android_lifecycle
-        run: |
-          sed -i 's/compileSdk .*/compileSdk 35/' android/app/build.gradle || true
-          sed -i 's/compileSdkVersion .*/compileSdkVersion 35/' android/app/build.gradle || true
-          sed -i 's/targetSdk .*/targetSdk 35/' android/app/build.gradle || true
-      - run: flutter clean
-      - run: flutter pub get
-      - run: flutter build apk --release --no-tree-shake-icons
-      - uses: actions/upload-artifact@v4
+
+      - name: Flutter version
+        run: flutter --version
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Build APK - no-shake-icons
+        run: flutter build apk --release --no-tree-shake-icons
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
         with:
-          name: DialogAI-ORIGINAL-FIXED-APK
+          name: app-release
           path: build/app/outputs/flutter-apk/app-release.apk
