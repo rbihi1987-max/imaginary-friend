@@ -199,5 +199,42 @@ class _CompanionHomeState extends State<CompanionHome> with SingleTickerProvider
             // Main
             Expanded(
               child: Column(children: [
-                Container(padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 18), decoration: BoxDecoration(color: const Color(0xFF0F172A).withOpacity(0.28), border: Border(bottom: BorderSide(color: Colors.white.withOpacity(0.06)))), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                  Row(children: [Container(width: 10, height: 10, decoration: BoxDecoration(color: const Color(0xFF34D399), shape: BoxShape.circle, boxShadow: [BoxShadow(color: const Color(0xFF34D399).withOpacity(0.3), blurRadius: 8, spreadRadius: 3)])), const SizedBox(width: 12
+                                Container(padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 18), decoration: BoxDecoration(color: const Color(0xFF0F172A).withOpacity(0.28), border: Border(bottom: BorderSide(color: Colors.white.withOpacity(0.06)))), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                  Row(children: [Container(width: 10, height: 10, decoration: BoxDecoration(color: const Color(0xFF34D399), shape: BoxShape.circle, boxShadow: [BoxShadow(color: const Color(0xFF34D399).withOpacity(0.3), blurRadius: 8, spreadRadius: 3)])), const SizedBox(width: 12), Text(companionName, style: const TextStyle(fontWeight: FontWeight.bold))]),
+                  Row(children: [_chip('تغيير مزاجه', true, () { List<String> moods = ['داعم', 'مضحك', 'مستقر', 'ذكي', 'رومانسي', 'مغامر']; int i = moods.indexOf(tone); tone = moods[(i + 1) % moods.length]; save(); setState(() { messages.add({'role': 'bot', 'text': 'أصبحت أكثر $tone معك.'}); }); _scrollDown(); }), const SizedBox(width: 8), _chip('مسح', false, () { setState(() { messages = [{'role': 'bot', 'text': 'تمت المحادثة. جاهز لبدء صفحة جديدة.'}]; memory = ['أنا صديقك الرقمي.']; }); save(); })]),
+                ])),
+                Expanded(child: wide ? Row(children: [Expanded(flex: 11, child: _chatPanel()), const SizedBox(width: 20), Expanded(flex: 9, child: _avatarPanel())]) : Column(children: [Expanded(child: _chatPanel()), SizedBox(height: 200, child: _avatarPanel())])),
+              ]),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _chip(String label, bool primary, VoidCallback onTap) {
+    return InkWell(onTap: onTap, child: Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), decoration: BoxDecoration(color: primary ? const Color(0xFF4F46E5) : Colors.white.withOpacity(0.04), borderRadius: BorderRadius.circular(20)), child: Text(label, style: const TextStyle(fontSize: 11))));
+  }
+
+  Widget _chatPanel() {
+    return Container(margin: const EdgeInsets.fromLTRB(20, 18, 0, 12), decoration: BoxDecoration(color: const Color(0xFF0F172A).withOpacity(0.45), borderRadius: BorderRadius.circular(24)), child: Column(children: [
+      Expanded(child: ListView.builder(controller: scrollCtrl, padding: const EdgeInsets.all(18), itemCount: messages.length, itemBuilder: (c, i) { var m = messages[i]; bool isUser = m['role'] == 'user'; return Align(alignment: isUser ? Alignment.centerRight : Alignment.centerLeft, child: Container(margin: const EdgeInsets.only(bottom: 14), padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: isUser ? const Color(0xFF4F46E5) : const Color(0xFF1E293B), borderRadius: BorderRadius.circular(18)), child: Text(m['text']!))); })),
+      Container(padding: const EdgeInsets.all(14), child: Row(children: [Expanded(child: TextField(controller: msgCtrl, decoration: InputDecoration(hintText: 'اكتب...', border: OutlineInputBorder(borderRadius: BorderRadius.circular(16))), onSubmitted: (_) => sendMessage())), const SizedBox(width: 12), ElevatedButton(onPressed: sendMessage, child: const Text('إرسال'))])),
+    ]));
+  }
+
+  Widget _avatarPanel() {
+    double mouthH = talking ? 10 + animCtrl.value * 18 : 6;
+    return Container(margin: const EdgeInsets.fromLTRB(0, 18, 20, 12), padding: const EdgeInsets.all(20), decoration: BoxDecoration(color: const Color(0xFF0F172A).withOpacity(0.7), borderRadius: BorderRadius.circular(24)), child: Column(children: [
+      Expanded(child: Center(child: SizedBox(width: 180, height: 300, child: Stack(children: [
+        Positioned(top: 28, left: 15, child: Container(width: 150, height: 170, decoration: BoxDecoration(color: const Color(0xFFF8D2AF), borderRadius: BorderRadius.circular(60)))),
+        Positioned(top: 108, left: 46, child: Container(width: 18, height: 24, decoration: const BoxDecoration(color: Color(0xFF111827), shape: BoxShape.circle))),
+        Positioned(top: 108, right: 46, child: Container(width: 18, height: 24, decoration: const BoxDecoration(color: Color(0xFF111827), shape: BoxShape.circle))),
+        Positioned(top: 164, left: 63, child: Container(width: 54, height: mouthH + 10, decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: Color(0xFF9A3F3F), width: 5)), borderRadius: BorderRadius.only(bottomLeft: Radius.circular(30), bottomRight: Radius.circular(30))))),
+        Positioned(bottom: 14, left: 0, child: Container(width: 180, height: 120, decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFF7C3AED), Color(0xFF4F46E5)]), borderRadius: BorderRadius.circular(30)))),
+      ])))),
+          Text('الذاكرة: ${memory.length}'),
+      ]),
+    );
+  }
+}
