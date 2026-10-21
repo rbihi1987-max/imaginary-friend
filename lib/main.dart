@@ -51,10 +51,10 @@ class _CompanionHomeState extends State<CompanionHome> with SingleTickerProvider
     companionName = box.get('companionName', defaultValue: 'صديقي الذكي');
     tone = box.get('tone', defaultValue: 'داعم');
     energy = box.get('energy', defaultValue: 'عادي');
-        memory = List<String>.from(box.get('memory', defaultValue: ['انا صديقك الرقمي']));
-    messages = (box.get('messages', defaultValue: [{'role': 'bot', 'text': 'مرحبا! انا صديقك الذكي'}]) as List).map((e) => Map<String, String>.from(e as Map)).toList();  animCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 150))..repeat(reverse: true);
-    animCtrl.addListener(() { if (talking) setState(() {}); });
-  }
+            memory = List<String>.from(box.get('memory', defaultValue: ['انا صديقك الرقمي']));
+    messages = (box.get('messages', defaultValue: [{'role': 'bot', 'text': 'مرحبا! انا صديقك الذكي'}]) as List).map((e) => Map<String, String>.from(e as Map)).toList();
+    animCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 150))..repeat(reverse: true);
+    animCtrl.addListener(() { if (talking) setState(() {}); });  }
 
   void save() {
     box.put('userName', userName);
