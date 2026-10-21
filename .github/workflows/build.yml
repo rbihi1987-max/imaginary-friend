@@ -14,11 +14,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.0'
+          flutter-version: '3.24.5'
           channel: 'stable'
+
+      - name: Fix Gradle - recreate android folder
+        run: |
+          rm -rf android
+          flutter create . --platforms=android --org com.rbihi.companion --project-name companion_ai --no-pub
+          flutter pub get
 
       - name: Flutter version
         run: flutter --version
@@ -26,7 +38,7 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
-      - name: Build APK - no-shake-icons
+      - name: Build APK
         run: flutter build apk --release --no-tree-shake-icons
 
       - name: Upload APK
