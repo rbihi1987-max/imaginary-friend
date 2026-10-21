@@ -146,7 +146,29 @@ class _CompanionHomeState extends State<CompanionHome> with SingleTickerProvider
     });
   }
 
-  void _scrollDown() { WidgetsBinding.instance.addPostFrameCallback((_) { if (scrollCtrl.hasClients) scrollCtrl.animateTo(scrollCtrl.position.maxScrollExtent + 200, duration: const Duration(milliseconds: 300), curve: Curves.easeOut); }); }
+    void _scrollDown() { WidgetsBinding.instance.addPostFrameCallback((_) { if (scrollCtrl.hasClients) scrollCtrl.animateTo(scrollCtrl.position.maxScrollExtent + 200, duration: const Duration(milliseconds: 300), curve: Curves.easeOut); }); }
+
+  // ⬇️⬇️⬇️ زيد هاد الجوج هنا بالضبط - السطر 156 ⬇️⬇️⬇️
+  InputDecoration _dec() {
+    return InputDecoration(
+      filled: true,
+      fillColor: const Color(0xFF0F172A).withOpacity(0.7),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.white.withOpacity(0.1))),
+      contentPadding: const EdgeInsets.all(10),
+    );
+  }
+
+  Widget _field(String label, Widget child) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(label, style: const TextStyle(fontSize: 11, color: Colors.white54)),
+        const SizedBox(height: 6),
+        child,
+      ]),
+    );
+  }
+  // ⬆️⬆️⬆️ حتى هنا ⬆️⬆️⬆️
 
   @override
   Widget build(BuildContext context) {
