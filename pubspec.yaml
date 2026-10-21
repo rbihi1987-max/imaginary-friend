@@ -1,7 +1,7 @@
 name: dialog_ai
-description: DialogAI v2 Final - COMPAÑEROS VIRTUALES + Avatar Editor 360 + Photo Video Editor + Live Brain
+description: DialogAI v2 Final - COMPAÑEROS VIRTUALES LUCIA ALEJANDRO Flamenco + Avatar Editor 360 Moño Flamenco + Photo Video PicsArt CapCut + Live Brain Google + TTS STT + Mood Memory Mimi Secure - ORIGINAL FIXED
 publish_to: 'none'
-version: 2.0.0+22
+version: 2.0.0+25
 environment:
   sdk: '>=3.0.0 <4.0.0'
   flutter: '>=3.24.0'
@@ -12,7 +12,7 @@ dependencies:
   http: ^1.1.2
   shared_preferences: ^2.2.2
   image_picker: ^1.0.7
-  flutter_tts: ^4.0.2
-  speech_to_text: ^6.6.0
+  flutter_tts: ^3.8.5
+  speech_to_text: ^6.5.1
 flutter:
   uses-material-design: true
