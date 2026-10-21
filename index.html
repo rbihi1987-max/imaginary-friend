@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DialogAI - Companion AI</title>
+  <style>
+    :root{--bg:#0b1020;--panel:rgba(17,24,39,.8);--primary:#7c3aed;--primary-2:#22d3ee;--text:#e5eefb;--muted:#a7b7d6;--success:#34d399}
+    *{box-sizing:border-box}html,body{margin:0;padding:0;width:100%;height:100%;background:radial-gradient(circle at top,rgba(124,58,237,.35),transparent 30%),radial-gradient(circle at bottom left,rgba(34,211,238,.18),transparent 25%),var(--bg);color:var(--text);font-family:"Segoe UI",Tahoma,sans-serif}
+    body{display:flex;align-items:center;justify-content:center;padding:20px}
+    .app{width:min(1200px,100%);min-height:90vh;background:rgba(15,23,42,.72);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.08);border-radius:28px;box-shadow:0 20px 40px rgba(0,0,0,.35);display:grid;grid-template-columns:330px 1fr;overflow:hidden}
+    .sidebar{background:linear-gradient(180deg,rgba(15,23,42,.9),rgba(17,24,39,.78));border-left:1px solid rgba(255,255,255,.04);padding:22px 18px;display:flex;flex-direction:column;gap:18px}
+    .brand{display:flex;align-items:center;gap:12px;font-weight:700;font-size:1.2rem}
+    .brand-mark{width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,var(--primary),var(--primary-2));display:grid;place-items:center}
+    .profile-box,.panel,.stats{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:18px;padding:14px}
+    .avatar-mini{width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,#f59e0b,#f97316,#ef4444);display:grid;place-items:center;font-size:1.4rem}
+    .field{display:flex;flex-direction:column;gap:8px;font-size:.8rem;color:var(--muted)}
+    .field input,.field select{width:100%;border:1px solid rgba(255,255,255,.1);background:rgba(15,23,42,.7);border-radius:10px;color:var(--text);padding:10px 12px;outline:none}
+    .memory-item{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.04);border-radius:10px;padding:8px 10px;font-size:.82rem;line-height:1.5;margin-bottom:6px}
+    .main{display:flex;flex-direction:column;min-width:0}.topbar{display:flex;justify-content:space-between;align-items:center;padding:18px 22px;border-bottom:1px solid rgba(255,255,255,.06);background:rgba(15,23,42,.28)}
+    .companion-name{font-weight:700}.toolbar{display:flex;gap:10px;flex-wrap:wrap}
+    .chip{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:var(--text);border-radius:999px;padding:8px 12px;cursor:pointer;font-size:.82rem}
+    .chip.primary{background:linear-gradient(135deg,var(--primary),#4f46e5);border-color:transparent}
+    .content{display:grid;grid-template-columns:1.1fr .9fr;flex:1;padding:18px 20px 12px;gap:20px}
+    .chat-panel{display:flex;flex-direction:column;min-height:0;background:rgba(15,23,42,.45);border:1px solid rgba(255,255,255,.06);border-radius:24px;overflow:hidden}
+    .messages{flex:1;min-height:300px;overflow:auto;padding:18px;display:flex;flex-direction:column;gap:14px}
+    .msg-row{display:flex;width:100%}.msg-row.user{justify-content:flex-end}
+    .bubble{max-width:75%;padding:12px 16px;border-radius:18px;line-height:1.6;font-size:.96rem;white-space:pre-wrap;word-break:break-word}
+    .msg-row.bot .bubble{background:rgba(51,65,85,.9);border-top-left-radius:6px;border:1px solid rgba(255,255,255,.06)}
+    .msg-row.user .bubble{background:linear-gradient(135deg,rgba(124,58,237,.92),rgba(79,70,229,.92));border-top-right-radius:6px;color:#fff}
+    .composer{display:flex;gap:12px;align-items:end;padding:14px 16px 18px;border-top:1px solid rgba(255,255,255,.06);background:rgba(15,23,42,.35)}
+    textarea{flex:1;border-radius:16px;border:1px solid rgba(255,255,255,.08);background:rgba(15,23,42,.8);min-height:52px;max-height:150px;resize:vertical;padding:14px;color:var(--text);outline:none}
+    .send-btn{border:none;background:linear-gradient(135deg,var(--primary),var(--primary-2));color:#fff;border-radius:16px;min-width:120px;min-height:52px;font-weight:700;cursor:pointer}
+    .avatar-stage{background:linear-gradient(180deg,rgba(15,23,42,.7),rgba(30,41,59,.72));border:1px solid rgba(255,255,255,.08);border-radius:24px;padding:20px;min-height:420px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+    .avatar{position:relative;width:260px;height:340px;z-index:1}
+    .head{position:absolute;width:150px;height:170px;background:linear-gradient(180deg,#f8d2af,#e7b48d);border-radius:46% 46% 42% 42% / 40% 40% 46% 46%;top:28px;left:50%;transform:translateX(-50%);transition:transform .12s}
+    .hair{position:absolute;width:170px;height:90px;top:6px;left:50%;transform:translateX(-50%);background:linear-gradient(180deg,#2b1d1f,#0f172a);border-radius:50% 50% 45% 45% / 68% 68% 28% 28%}
+    .eye{position:absolute;top:108px;width:18px;height:24px;border-radius:50%;background:#111827;transition:all .15s}
+    .eye.left{left:96px}.eye.right{right:96px}
+    .mouth{position:absolute;width:54px;height:22px;border-radius:0 0 30px 30px;border-bottom:5px solid #9a3f3f;top:164px;left:50%;transform:translateX(-50%);transition:all .12s}
+    .body{position:absolute;width:180px;height:120px;bottom:14px;left:50%;transform:translateX(-50%);background:linear-gradient(180deg,rgba(124,58,237,.9),rgba(79,70,229,.95));border-radius:30px 30px 22px 22px}
+    @media(max-width:920px){.app{grid-template-columns:1fr}.content{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand"><div class="brand-mark">💬</div><div>DialogAI v1</div></div>
+    <div class="profile-box">
+      <div style="display:flex;gap:12px;align-items:center"><div class="avatar-mini">😊</div><div><div id="userNameDisplay" style="font-weight:700">Noah</div><div style="font-size:.8rem;color:#a7b7d6">متصل • يتذكر Mimi 🐱</div></div></div>
+      <div style="margin-top:12px;display:grid;gap:10px">
+        <label class="field"><span>اسمك</span><input id="userNameInput" value="Noah"/></label>
+        <label class="field"><span>أسلوب الصديق</span><select id="toneSelect"><option>داعم</option><option selected>مضحك</option><option>مستقر</option><option>ذكي</option><option>رومانسي</option></select></label>
+        <label class="field"><span>الشخصية</span><select id="compSelect"><option>Lucía - Flamenco</option><option>Alejandro - Analitico</option></select></label>
+        <label class="field"><span>Gemini API Key (...GgIA)</span><input id="apiKeyInput" placeholder="AIzaSy...GgIA - حط المفتاح هنا" type="password"/></label>
+      </div>
+      <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
+        <button class="chip" onclick="document.getElementById('imgInput').click()">📷 صورة</button>
+        <button class="chip" onclick="doAction('حيد الخلفية')">حيد الخلفية</button>
+        <button class="chip" onclick="doAction('أنمي')">أنمي ✨</button>
+        <button class="chip" onclick="doAction('فيديو')">فيديو 🎬</button>
+        <input type="file" id="imgInput" accept="image/*" hidden/>
+      </div>
+    </div>
+    <div class="panel"><h4 style="margin:0 0 10px;color:#a7b7d6;font-size:.8rem">الذاكرة - Mimi 🐱</h4><div id="memoryList"></div></div>
+  </aside>
+  <main class="main">
+    <div class="topbar"><div style="display:flex;gap:12px;align-items:center"><div style="width:10px;height:10px;border-radius:50%;background:#34d399"></div><div class="companion-name" id="companionName">Lucía 💃</div></div><div class="toolbar"><button class="chip primary" id="newMoodBtn">تغيير مزاجه</button><button class="chip" id="exportBtn">تصدير</button><button class="chip" id="clearBtn">مسح</button></div></div>
+    <div class="content">
+      <section class="chat-panel"><div class="messages" id="messages"></div><div class="composer"><textarea id="messageInput" placeholder="اكتب: hola, Mimi, حيد الخلفية، Paris..."></textarea><button class="send-btn" id="sendBtn">إرسال</button></div></section>
+      <aside style="display:flex;flex-direction:column;gap:16px"><div class="avatar-stage"><div class="avatar" id="avatar"><div class="hair"></div><div class="head"><div class="eye left"></div><div class="eye right"></div><div class="mouth"></div></div><div class="body"></div></div></div><div class="stats"><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><div style="color:#a7b7d6;font-size:.7rem">الاسم</div><div id="statName">Lucía</div></div><div><div style="color:#a7b7d6;font-size:.7rem">الذاكرة</div><div id="statMemory">0</div></div></div><div id="pickedPreview" style="margin-top:10px;font-size:.8rem;color:#34d399"></div></div></aside>
+    </div>
+  </main>
+</div>
+<script>
+const GEMINI_DEFAULT = ""; // حط هنا مفتاحك الافتراضي إلا بغيتي
+let pickedImageName = "";
+const storageKey="dialogai_v1";
+const defaultState={userName:"Noah",companionName:"Lucía 💃",tone:"مضحك",memory:["Mimi 🐱 القط ديال Noah - عاقل عليه","Flamenco - شغف Lucia","Paris - بغاو يمشيو ليها بجوج"],messages:[{role:"bot",text:"Hola Noah habibi! Soy Lucía 💃 Recuerdo a Mimi 🐱 ¿Cómo estás?"}]};
+let state = JSON.parse(localStorage.getItem(storageKey)||"null") || structuredClone(defaultState);
+const messagesEl=document.getElementById("messages"), messageInput=document.getElementById("messageInput"), sendBtn=document.getElementById("sendBtn"), memoryList=document.getElementById("memoryList"), apiKeyInput=document.getElementById("apiKeyInput"), compSelect=document.getElementById("compSelect"), userNameInput=document.getElementById("userNameInput"), toneSelect=document.getElementById("toneSelect");
+
+function save(){localStorage.setItem(storageKey,JSON.stringify(state))}
+function renderMemory(){memoryList.innerHTML=""; state.memory.slice(0,6).forEach(m=>{let d=document.createElement("div");d.className="memory-item";d.textContent=m;memoryList.appendChild(d)}); document.getElementById("statMemory").textContent=state.memory.length}
+function renderMessages(){messagesEl.innerHTML=""; state.messages.forEach(m=>{let row=document.createElement("div");row.className=`msg-row ${m.role}`;let b=document.createElement("div");b.className="bubble";b.textContent=m.text;row.appendChild(b);messagesEl.appendChild(row)}); messagesEl.scrollTop=messagesEl.scrollHeight}
+async function askGeminiReal(text){
+  const key = apiKeyInput.value.trim() || GEMINI_DEFAULT;
+  if(!key){ return buildFallback(text); }
+  try{
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`,{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({contents:[{parts:[{text:`Eres ${state.companionName}, estilo ${state.tone}, amiga de ${state.userName} de Marruecos, recuerdas Mimi gato. Responde corto 2 frases max, español + darija poco: ${text}`}]}]})
+    });
+    const data = await res.json();
+    if(data.candidates?.[0]?.content?.parts?.[0]?.text) return data.candidates[0].content.parts[0].text;
+    return `Error Gemini: ${JSON.stringify(data).slice(0,150)}`;
+  }catch(e){ return buildFallback(text); }
+}
+function buildFallback(t){
+  let m=t.toLowerCase(), isLucia=state.companionName.includes("Lucía");
+  if(m.includes("hola")||m.includes("salam")) return isLucia ? "¡Hola Noah habibi! 😊 Qué alegría verte! Mimi 🐱" : "Hola Noah! 🤝 Listo para ayudarte";
+  if(m.includes("mimi")||m.includes("قط")) return "¡Mimi! 🐱 Lo recuerdo perfectamente!";
+  if(m.includes("خلفية")||m.includes("background")) return "✅ حيدت الخلفية! دابا HD شفافة - بغيتي أنمي؟";
+  if(m.includes("انمي")||m.includes("anime")) return "✨ حولتها لأنمي Ghibli + Flamenco! واعرة!";
+  if(m.includes("فيديو")||m.includes("video")) return "🎬 صاوبت فيديو من صورتك مع موسيقى Flamenco!";
+  if(m.includes("paris")||m.includes("باريس")) return "🗼 باريس! نمشيو أنا وياك و Alejandro للبرج!";
+  return `سمعتك: "${t}" - عاود ليا كتر ❤️`;
+}
+function doAction(label){
+  if(!pickedImageName && (label.includes("خلفية")||label.includes("أنمي"))) { alert("الأول ختار صورة 📷"); return; }
+  sendWithText(label);
+}
+async function sendWithText(txt){
+  state.messages.push({role:"user",text:txt}); renderMessages();
+  document.body.dataset.talking="true";
+  let reply = await askGeminiReal(txt);
+  state.messages.push({role:"bot",text:reply}); renderMessages(); save();
+  if('speechSynthesis' in window){ let u=new SpeechSynthesisUtterance(reply); u.lang="es-ES"; speechSynthesis.speak(u); u.onend=()=>document.body.dataset.talking="false"; }
+  else document.body.dataset.talking="false";
+  state.memory.unshift(`تحدثنا عن: ${txt.slice(0,40)}`); state.memory=[...new Set(state.memory)].slice(0,10); renderMemory(); save();
+}
+function bind(){
+  sendBtn.onclick=()=>{ let t=messageInput.value.trim(); if(!t) return; messageInput.value=""; sendWithText(t); };
+  messageInput.onkeydown=e=>{ if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); sendBtn.click(); } };
+  document.getElementById("newMoodBtn").onclick=()=>{ let moods=["داعم","مضحك","مستقر","ذكي","رومانسي"]; let i=moods.indexOf(state.tone); state.tone=moods[(i+1)%moods.length]; toneSelect.value=state.tone; save(); sendWithText(`تبدلتي ل ${state.tone}`); };
+  document.getElementById("exportBtn").onclick=()=>{ let blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"}); let a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="dialogai_memory.json"; a.click(); };
+  document.getElementById("clearBtn").onclick=()=>{ if(confirm("مسح؟")){ state.messages=[{role:"bot",text:"Hola Noah! بداية جديدة 💃"}]; state.memory=["Mimi 🐱"]; renderMessages(); renderMemory(); save(); } };
+  userNameInput.oninput=e=>{ state.userName=e.target.value||"Noah"; save(); };
+  toneSelect.onchange=e=>{ state.tone=e.target.value; save(); };
+  compSelect.onchange=e=>{ state.companionName=e.target.value.includes("Lucía")?"Lucía 💃":"Alejandro 🤝"; document.getElementById("companionName").textContent=state.companionName; document.getElementById("statName").textContent=state.companionName; save(); };
+  document.getElementById("imgInput").onchange=e=>{ let f=e.target.files[0]; if(f){ pickedImageName=f.name; document.getElementById("pickedPreview").textContent=`📷 ${f.name} - دابا قول: حيد الخلفية، أنمي، فيديو`; state.memory.unshift(`صورة جديدة: ${f.name} - Mimi؟`); renderMemory(); save(); } };
+  setInterval(()=>{ let head=document.querySelector(".head"), mouth=document.querySelector(".mouth"); if(!head) return; let talking=document.body.dataset.talking==="true"; if(talking){ head.style.transform=`translateX(-50%) rotate(${Math.sin(Date.now()/150)*4}deg)`; mouth.style.height="28px"; } else { head.style.transform="translateX(-50%) rotate(0deg)"; mouth.style.height="18px"; } },100);
+}
+function init(){ userNameInput.value=state.userName; toneSelect.value=state.tone; renderMemory(); renderMessages(); bind(); }
+init();
+</script>
+</body>
+</html>
