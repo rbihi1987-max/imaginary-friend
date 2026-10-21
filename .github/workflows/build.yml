@@ -14,10 +14,15 @@ jobs:
           if [ ! -d "android" ]; then
             flutter create . --org com.dialog.ai --project-name dialog_ai --platforms=android --no-pub
           fi
+      - name: Fix SDK 35 as required by flutter_plugin_android_lifecycle
+        run: |
+          sed -i 's/compileSdk .*/compileSdk 35/' android/app/build.gradle || true
+          sed -i 's/compileSdkVersion .*/compileSdkVersion 35/' android/app/build.gradle || true
+          sed -i 's/targetSdk .*/targetSdk 35/' android/app/build.gradle || true
       - run: flutter clean
       - run: flutter pub get
       - run: flutter build apk --release --no-tree-shake-icons
       - uses: actions/upload-artifact@v4
         with:
-          name: DialogAI-Final-APK-Fixed
+          name: DialogAI-ORIGINAL-FIXED-APK
           path: build/app/outputs/flutter-apk/app-release.apk
