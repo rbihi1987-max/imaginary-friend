@@ -5,7 +5,7 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:http/http.dart' as http;
 
-const String GEMINI_API_KEY = "AQ.Ab8RN6IZ-AQ.Ab8RN6IU62GO3_afAo1XSHpFk7LFu_9e2qEHwq9cN0JqVtGglA";
+const String GEMINI_API_KEY = "AQ.Ab8RN6L9ZkiQFgEUrBEEy7sgNtmfXv4Rl7zDVmRk2BN5Q4nyEA";
 
 void main() => runApp(const DialogAIApp());
 
