@@ -6,8 +6,7 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:http/http.dart' as http;
 import 'package:hive_flutter/hive_flutter.dart';
 
-// ⬇️⬇️ حط المفتاح الكامل ديال Key 12 - ...GgIA هنا ⬇️⬇️
-const String GEMINI_API_KEY = "AIzaSy...GgIA";
+const String GEMINI_API_KEY = "AQ.Ab8RN6KSi_1grJGYNlffzziA5rFQS53VhUR2PckzgRUCXrCVdQ";
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
