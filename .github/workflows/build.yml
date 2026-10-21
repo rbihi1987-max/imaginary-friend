@@ -9,11 +9,19 @@ jobs:
         with:
           flutter-version: '3.24.5'
           channel: 'stable'
-      - name: Create Android project
+      - name: Create Android project if missing
         run: |
           if [ ! -d "android" ]; then
             flutter create . --org com.dialog.ai --project-name dialog_ai --platforms=android
           fi
+      - name: Fix Android SDK 35 for flutter_tts
+        run: |
+          sed -i 's/compileSdk .*/compileSdk 35/' android/app/build.gradle || true
+          sed -i 's/compileSdkVersion .*/compileSdkVersion 35/' android/app/build.gradle || true
+          sed -i 's/targetSdk .*/targetSdk 35/' android/app/build.gradle || true
+          sed -i 's/targetSdkVersion .*/targetSdkVersion 35/' android/app/build.gradle || true
+          sed -i 's/flutter.compileSdkVersion .*/flutter.compileSdkVersion = 35/' android/local.properties || true
+          sed -i 's/flutter.targetSdkVersion .*/flutter.targetSdkVersion = 35/' android/local.properties || true
       - run: flutter clean
       - run: flutter pub get
       - run: flutter build apk --release --no-tree-shake-icons
