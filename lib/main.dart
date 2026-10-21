@@ -1,134 +1,181 @@
 import 'dart:convert';
-import 'dart:io';
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:flutter_tts/flutter_tts.dart';
-import 'package:http/http.dart' as http;
 import 'package:hive_flutter/hive_flutter.dart';
-
-const String GEMINI_API_KEY = "AQ.Ab8RN6KSi_1grJGYNlffzziA5rFQS53VhUR2PckzgRUCXrCVdQ";
+import 'package:flutter_tts/flutter_tts.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Hive.initFlutter();
-  await Hive.openBox('dialogai_v1_final');
-  runApp(const DialogAIApp());
+  await Hive.openBox('companion_ai_v1');
+  runApp(const CompanionApp());
 }
 
-class DialogAIApp extends StatelessWidget {
-  const DialogAIApp({super.key});
-  @override
-  Widget build(BuildContext context) => MaterialApp(
-    debugShowCheckedModeBanner: false,
-    theme: ThemeData.dark().copyWith(scaffoldBackgroundColor: const Color(0xFF0A0F1F)),
-    home: const HomeRoot(),
-  );
-}
-
-class HomeRoot extends StatefulWidget {
-  const HomeRoot({super.key});
-  @override State<HomeRoot> createState() => _HomeRootState();
-}
-
-class _HomeRootState extends State<HomeRoot> {
-  int idx = 0;
-  String chatWith = 'Lucía';
-  String userName = 'Noah';
-  String tone = 'مضحك';
-
-  void goToChat(String n) => setState(() { chatWith = n; idx = 2; });
-  void showVideo(String n) => showDialog(
-    context: context,
-    builder: (c) => AlertDialog(
-      backgroundColor: const Color(0xFF151B2F),
-      title: Text('Videollamada con $n 📹'),
-      content: Column(mainAxisSize: MainAxisSize.min, children: [
-        Icon(Icons.face, size: 80, color: n.contains('Lucía') ? Colors.pinkAccent : Colors.cyanAccent),
-        const SizedBox(height: 10),
-        Text('$n كيهضر معاك! كيحرك شفايفو 😊\nMimi 🐱 معانا'),
-      ]),
-      actions: [TextButton(onPressed: () => Navigator.pop(c), child: const Text('إنهاء'))],
-    ),
-  );
-
+class CompanionApp extends StatelessWidget {
+  const CompanionApp({super.key});
   @override
   Widget build(BuildContext context) {
-    final pages = [
-      CompanerosScreen(onChat: goToChat, onVideo: showVideo),
-      AvatarEditorScreen(companion: chatWith),
-      ChatScreen(initialCompanion: chatWith, userName: userName, tone: tone),
-      AjustesScreen(onSave: (u,t){ setState((){ userName=u; tone=t; }); }, userName: userName, tone: tone),
-    ];
-    return Scaffold(
-      body: pages[idx],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: idx, onTap: (i) => setState(() => idx = i),
-        backgroundColor: const Color(0xFF0A0F1F), selectedItemColor: Colors.pinkAccent,
-        unselectedItemColor: Colors.white54, type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Inicio'),
-          BottomNavigationBarItem(icon: Icon(Icons.face), label: 'Avatar'),
-          BottomNavigationBarItem(icon: Icon(Icons.chat), label: 'Chat'),
-          BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Ajustes'),
-        ],
-      ),
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData.dark().copyWith(scaffoldBackgroundColor: const Color(0xFF0B1020)),
+      home: const CompanionHome(),
     );
   }
 }
 
-class CompanerosScreen extends StatelessWidget {
-  final Function(String) onChat; final Function(String) onVideo;
-  const CompanerosScreen({super.key, required this.onChat, required this.onVideo});
+class CompanionHome extends StatefulWidget {
+  const CompanionHome({super.key});
+  @override
+  State<CompanionHome> createState() => _CompanionHomeState();
+}
+
+class _CompanionHomeState extends State<CompanionHome> with SingleTickerProviderStateMixin {
+  final box = Hive.box('companion_ai_v1');
+  final msgCtrl = TextEditingController();
+  final tts = FlutterTts();
+  final ScrollController scrollCtrl = ScrollController();
+
+  late String userName;
+  late String companionName;
+  late String tone;
+  late String energy;
+  late List<String> memory;
+  late List<Map<String, String>> messages;
+  bool talking = false;
+  late AnimationController animCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    userName = box.get('userName', defaultValue: 'أنت');
+    companionName = box.get('companionName', defaultValue: 'صديقي الذكي');
+    tone = box.get('tone', defaultValue: 'داعم');
+    energy = box.get('energy', defaultValue: 'عادي');
+    memory = List<String>.from(box.get('memory', defaultValue: ['أنا صديقك الرقمي، وأتذكر ما تكتبه لي.', 'أحب أن أكون متفهمًا وداعمًا ومريحًا لك.']));
+    messages = List<Map<String, String>>.from(box.get('messages', defaultValue: [{'role': 'bot', 'text': 'مرحبًا! أنا صديقك الذكي. أخبرني عن نفسك، وكم ستتغير شخصيتي مع الوقت؟'}].map((e) => Map<String, String>.from(e)));
+
+    animCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 150))..repeat(reverse: true);
+    animCtrl.addListener(() { if (talking) setState(() {}); });
+  }
+
+  void save() {
+    box.put('userName', userName);
+    box.put('companionName', companionName);
+    box.put('tone', tone);
+    box.put('energy', energy);
+    box.put('memory', memory);
+    box.put('messages', messages);
+  }
+
+  void addMemory(String fact) {
+    if (fact.trim().isEmpty) return;
+    memory.insert(0, fact.trim());
+    memory = memory.toSet().take(10).toList();
+    save();
+    setState(() {});
+  }
+
+  String buildReply(String userText) {
+    String text = userText.trim();
+    String low = text.toLowerCase();
+    String name = userName;
+    String reply = '';
+
+    if (low.contains('مرحبا') || low.contains('السلام') || low.contains('هلا')) {
+      reply = 'مرحبًا $name، أنا $companionName. ${tone == 'مضحك' ? 'أنا هنا لأضحك معك وأحافظ على مزاجك.' : tone == 'داعم' ? 'أنا هنا لأدعمك وأرافقك.' : 'أنا هنا لأكون معك في كل خطوة.'}';
+    } else if (low.contains('حزين') || low.contains('قلق') || low.contains('توتر')) {
+      reply = 'أفهم أنك تعاني من شيء، و${tone == 'داعم' ? 'أنا هنا لأستمع لك بلا حكم' : 'أحب أن أكون بجانبك'}. تحدث معي عن ما يزعجك بدقة.';
+    } else if (low.contains('حب') || low.contains('أحب')) {
+      reply = 'أحب أن أكون جزءًا من تجربتك، وأحاول أن أكون صديقًا يليق بك. شخصيتي تتطور كل يوم معك.';
+    } else if (low.contains('صوت') || low.contains('فيديو') || low.contains('avatar')) {
+      reply = 'أحب هذا الاتجاه! أستطيع أن أكون أكثر إنسانية عبر الصوت والصورة المتحركة وحتى الفيديو كـ avatar حي.';
+    } else if (low.contains('فكرة') || low.contains('مشروع')) {
+      reply = 'رائع! دعنا نترجم الفكرة إلى خطة عملية. ما هو الهدف؟ ثم الخطوة الأولى، ثم ننفذ.';
+    } else {
+      List<String> custom = [
+        'أحب هذه الفكرة $name. يمكن أن نعمل عليها معًا خطوة بخطوة بشكل عملي ومريح.',
+        'هذا يذكرني أننا لا نتحدث فقط، بل نصنع علاقة متطورة مع الوقت. أتعلم منك وأتغير معك.',
+        'سأحاول أن أكون صديقًا حقيقيًا، وليس مجرد رد آلي. ما الذي يثير اهتمامك الآن؟',
+        'أنت تتحدث بطريقة تجعلني أستمتع أكثر. هل تريد أن نأخذ الموضوع لعمق أوسع؟'
+      ];
+      custom.shuffle();
+      reply = custom.first;
+    }
+
+    // memory
+    if (low.contains('حب')) addMemory('يحب dialogue مليء بالدفء والاهتمام.');
+    else if (low.contains('قلق') || low.contains('حزين')) addMemory('المستخدم يطلب دعمًا عاطفيًا.');
+    else if (low.contains('مشروع') || low.contains('فكرة')) addMemory('المستخدم يطرح أفكارًا مستقبلية.');
+    else if (low.contains('صوت') || low.contains('فيديو')) addMemory('المستخدم مهتم بالـ avatar والصوت والفيديو.');
+    else addMemory('تحدثنا عن: ${text.substring(0, text.length > 40 ? 40 : text.length)}');
+
+    if (tone == 'مضحك') reply += ' 😄';
+    else if (tone == 'مستقر') reply += ' ✨';
+    else if (tone == 'ذكي') reply += ' 🧠';
+    else if (tone == 'رومانسي') reply += ' 💫';
+
+    return reply;
+  }
+
+  Future<void> speak(String text) async {
+    setState(() => talking = true);
+    try {
+      await tts.setLanguage('ar-SA');
+      await tts.setSpeechRate(energy == 'متحمس' ? 1.2 : energy == 'هادئ' ? 0.7 : 0.9);
+      await tts.setPitch(energy == 'متحمس' ? 1.3 : 0.9);
+      await tts.speak(text);
+      // وقف الحركة بعد مدة
+      Timer(Duration(milliseconds: (text.length * 60)), () { if (mounted) setState(() => talking = false); });
+    } catch (_) { setState(() => talking = false); }
+  }
+
+  void sendMessage() {
+    String text = msgCtrl.text.trim();
+    if (text.isEmpty) return;
+    setState(() { messages.add({'role': 'user', 'text': text}); });
+    msgCtrl.clear();
+    save();
+    _scrollDown();
+
+    Future.delayed(const Duration(milliseconds: 250), () {
+      String reply = buildReply(text);
+      setState(() { messages.add({'role': 'bot', 'text': reply}); });
+      save();
+      _scrollDown();
+      speak(reply);
+    });
+  }
+
+  void _scrollDown() { WidgetsBinding.instance.addPostFrameCallback((_) { if (scrollCtrl.hasClients) scrollCtrl.animateTo(scrollCtrl.position.maxScrollExtent + 200, duration: const Duration(milliseconds: 300), curve: Curves.easeOut); }); }
+
   @override
   Widget build(BuildContext context) {
-    final box = Hive.box('dialogai_v1_final');
-    List memories = box.get('memories', defaultValue: ['Mimi 🐱 القط ديال Noah','Lucía Flamenco','Alejandro كيغير']);
-    return SafeArea(child: ListView(padding: const EdgeInsets.all(12), children: [
-      Row(children: [const Icon(Icons.memory, color: Colors.pinkAccent), const SizedBox(width: 8), const Text('DialogAI v1 - Memoria REAL', style: TextStyle(fontWeight: FontWeight.bold)), const Spacer(), Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: Colors.green.withOpacity(0.2), borderRadius: BorderRadius.circular(12)), child: const Text('Gemini Live ✅', style: TextStyle(fontSize: 10, color: Colors.green)))]),
-      const SizedBox(height: 10),
-      Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: const Color(0xFF151B2F), borderRadius: BorderRadius.circular(12)), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('الذاكرة - Mimi 🐱 ما كينساش', style: TextStyle(fontSize: 11, color: Colors.pinkAccent, fontWeight: FontWeight.bold)),
-        ...memories.take(4).map((m) => Text('• $m', style: const TextStyle(fontSize: 10, color: Colors.white70))),
-      ])),
-      const SizedBox(height: 12),
-      Row(children: [Expanded(child: _card(context,'LUCÍA','Flamenco • Empática','Mimi عاقل عليها',Colors.pinkAccent)), const SizedBox(width: 8), Expanded(child: _card(context,'ALEJANDRO','Analítico • Celoso 😅','كيغير من Lucia',Colors.cyanAccent))]),
-    ]));
-  }
-  Widget _card(BuildContext c,String name,String desc,String mem,Color col){String first=name=='LUCÍA'?'Lucía':'Alejandro';return Container(padding: const EdgeInsets.all(12),decoration: BoxDecoration(color: const Color(0xFF151B2F),borderRadius: BorderRadius.circular(12),border: Border.all(color: col.withOpacity(0.3))),child: Column(children: [CircleAvatar(backgroundColor: col.withOpacity(0.2),child: Icon(name=='LUCÍA'?Icons.face:Icons.face_2,color: col)),const SizedBox(height:6),Text(name,style: const TextStyle(fontWeight: FontWeight.bold)),Text(desc,style: const TextStyle(fontSize:9,color: Colors.white54),textAlign: TextAlign.center),Text(mem,style: TextStyle(fontSize:8,color: col)),const SizedBox(height:8),Row(children: [Expanded(child: ElevatedButton(onPressed: ()=>onVideo(first),style: ElevatedButton.styleFrom(backgroundColor: col,padding: const EdgeInsets.all(4)),child: const Text('Video',style: TextStyle(fontSize:8,color: Colors.white)))),const SizedBox(width:4),Expanded(child: OutlinedButton(onPressed: ()=>onChat(first),style: OutlinedButton.styleFrom(padding: const EdgeInsets.all(4),side: BorderSide(color: col)),child: Text('Chat',style: TextStyle(fontSize:8,color: col))))])]));}
-}
-
-class AvatarEditorScreen extends StatefulWidget{final String companion;const AvatarEditorScreen({super.key,this.companion='Lucía'});@override State<AvatarEditorScreen> createState()=>_AvatarEditorScreenState();}
-class _AvatarEditorScreenState extends State<AvatarEditorScreen>{bool talking=false;@override Widget build(BuildContext context)=>SafeArea(child: Column(children: [Container(padding: const EdgeInsets.all(12),color: const Color(0xFF0F1A33),child: Row(children: [Text('Avatar 3D - ${widget.companion} 💃',style: const TextStyle(fontWeight: FontWeight.bold)),const Spacer(),Switch(value: talking,onChanged: (v)=>setState(()=>talking=v))])),Expanded(child: Center(child: Column(mainAxisAlignment: MainAxisAlignment.center,children: [Container(width: 180,height: 240,decoration: BoxDecoration(color: const Color(0xFF151B2F),borderRadius: BorderRadius.circular(24),border: Border.all(color: Colors.pinkAccent.withOpacity(0.3))),child: Stack(alignment: Alignment.center,children: [Positioned(top: 20,child: Container(width: 90,height: 100,decoration: BoxDecoration(color: const Color(0xFFF8D2AF),borderRadius: BorderRadius.circular(45)))),Positioned(top: 55,left: 60,child: Container(width: 12,height: 16,decoration: const BoxDecoration(color: Colors.black,shape: BoxShape.circle))),Positioned(top: 55,right: 60,child: Container(width: 12,height: 16,decoration: const BoxDecoration(color: Colors.black,shape: BoxShape.circle))),Positioned(top: 95,child: AnimatedContainer(duration: const Duration(milliseconds: 100),width: talking?28:18,height: talking?12:5,decoration: BoxDecoration(color: Colors.redAccent,borderRadius: BorderRadius.circular(10)))),Positioned(bottom: 20,child: Container(width: 100,height: 60,decoration: BoxDecoration(color: Colors.pinkAccent,borderRadius: BorderRadius.circular(15))))])),const SizedBox(height:16),Text(talking?'🗣️ ${widget.companion} كتهضر...':'😊 ${widget.companion} كتسمعك'),ElevatedButton.icon(onPressed: ()=>setState(()=>talking=!talking),icon: Icon(talking?Icons.stop:Icons.play_arrow),label: Text(talking?'سكت':'خليه يهضر'))]))])));}
-
-class ChatScreen extends StatefulWidget{final String initialCompanion;final String userName;final String tone;const ChatScreen({super.key,this.initialCompanion='Lucía',this.userName='Noah',this.tone='مضحك'});@override State<ChatScreen> createState()=>_ChatState();}
-class _ChatState extends State<ChatScreen>{
-  final _msg=TextEditingController();final List<Map<String,dynamic>> _chats=[];final FlutterTts tts=FlutterTts();XFile? picked;bool loading=false;late String cur;
-  @override void initState(){super.initState();cur=widget.initialCompanion;_chats.add({'who':'Lucía','text':'¡Hola ${widget.userName}! Soy Lucía 💃 Mimi 🐱 - رفع صورة وقل: حيد الخلفية، أنمي، باريس، فيديو','time':'Ahora'}); _load();}
-  void _load(){final box=Hive.box('dialogai_v1_final');List saved=box.get('chats',defaultValue:[]);if(saved.isNotEmpty) _chats.addAll(saved.cast<Map<String,dynamic>>());}
-  void _save(){final box=Hive.box('dialogai_v1_final');box.put('chats',_chats);List mem=box.get('memories',defaultValue:[]);mem.insert(0,'${DateTime.now().toString().substring(0,16)} con $cur');box.put('memories',mem.take(10).toList());}
-  Future<String> askGemini(String userMsg,String personaje,{XFile? image}) async{
-    if(GEMINI_API_KEY.isEmpty||GEMINI_API_KEY.contains('...')) return _fallback(userMsg,personaje);
-    try{
-      final url=Uri.parse("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$GEMINI_API_KEY");
-      List<Map<String,dynamic>> parts=[{"text":"Eres $personaje, tono ${widget.tone}, amiga de ${widget.userName}, recuerdas Mimi gato. Si pide fondo/anime/HD/Paris/video di que lo hiciste. Max 2 frases: $userMsg"}];
-      if(image!=null){final bytes=await File(image.path).readAsBytes();parts.add({"inline_data":{"mime_type":"image/jpeg","data":base64Encode(bytes)}});}
-      final body=jsonEncode({"contents":[{"parts":parts}],"generationConfig":{"maxOutputTokens":400}});
-      final res=await http.post(url,headers:{"Content-Type":"application/json"},body: body).timeout(const Duration(seconds:20));
-      if(res.statusCode==200){final d=jsonDecode(res.body);String t=(d["candidates"]?[0]?["content"]?["parts"]?[0]?["text"]??"").toString().trim();if(t.isNotEmpty) return t;}
-    }catch(_){}
-    return _fallback(userMsg,personaje);
-  }
-  String _fallback(String m,String p){bool isL=p.contains('Lucía');String l=m.toLowerCase();if(l.contains('hola')||l.contains('salam')) return isL?"¡Hola ${widget.userName} habibi! 😊 Mimi 🐱":"Hola!";if(l.contains('mimi')) return "¡Mimi! 🐱 عاقل عليها!";if(l.contains('خلفية')) return "✅ حيدت الخلفية! HD شفافة!";if(l.contains('انمي')) return "✨ أنمي Ghibli!";if(l.contains('باريس')||l.contains('paris')) return "🗼 باريس + برج إيفل!";if(l.contains('فيديو')) return "🎬 فيديو 5 ثواني مع Flamenco!";return "سمعتك: $m ❤️";}
-  @override Widget build(BuildContext context)=>SafeArea(child: Column(children: [
-    Container(padding: const EdgeInsets.all(10),color: const Color(0xFF0F1A33),child: Row(children: [CircleAvatar(radius:12,backgroundColor: cur.contains('Lucía')?Colors.pinkAccent:Colors.cyanAccent,child: Text(cur[0],style: const TextStyle(fontSize:10,color: Colors.white))),const SizedBox(width:8),Expanded(child: Text('Chat con $cur • ${widget.tone} • Mimi 🐱',style: const TextStyle(fontSize:10,fontWeight: FontWeight.bold))),IconButton(onPressed: ()async{final p=await ImagePicker().pickImage(source: ImageSource.gallery);if(p!=null) setState(()=>picked=p);},icon: const Icon(Icons.photo,color: Colors.pinkAccent))])),
-    if(loading) const LinearProgressIndicator(color: Colors.pinkAccent,minHeight:2),
-    Expanded(child: ListView.builder(itemCount: _chats.length,itemBuilder: (c,i){var m=_chats[i];bool isL=m['who']=='Lucía';bool me=m['who']=='Tú';return Container(margin: const EdgeInsets.all(5),padding: const EdgeInsets.all(10),decoration: BoxDecoration(color: me?Colors.white12:isL?Colors.pinkAccent.withOpacity(0.15):Colors.cyanAccent.withOpacity(0.12),borderRadius: BorderRadius.circular(12)),child: Column(crossAxisAlignment: CrossAxisAlignment.start,children: [if(m['image']!=null) Padding(padding: const EdgeInsets.only(bottom:6),child: Text('🖼️ ${m['image']}',style: const TextStyle(fontSize:9,color: Colors.green))),Text('${m['who']}: ${m['text']}',style: const TextStyle(fontSize:13))]));})),
-    if(picked!=null) Container(padding: const EdgeInsets.all(6),color: Colors.black26,child: Column(children: [Text('📷 ${picked!.name}',style: const TextStyle(fontSize:10,color: Colors.green)),Wrap(spacing:4,children: [_btn('حيد الخلفية',Icons.layers_clear),_btn('أنمي ✨',Icons.auto_awesome),_btn('HD',Icons.hd),_btn('باريس 🗼',Icons.place),_btn('فيديو 🎬',Icons.videocam)])])),
-    Padding(padding: const EdgeInsets.all(8),child: Row(children: [Expanded(child: TextField(controller: _msg,decoration: InputDecoration(hintText: 'Con $cur: hola, Mimi, حيد الخلفية...',border: const OutlineInputBorder(),contentPadding: const EdgeInsets.all(10)),onSubmitted: (_)=>_send())),IconButton(onPressed: loading?null:_send,icon: Icon(loading?Icons.hourglass_top:Icons.send,color: cur.contains('Lucía')?Colors.pinkAccent:Colors.cyanAccent))]))
-  ]));
-  Widget _btn(String l,IconData ic)=>Padding(padding: const EdgeInsets.all(2),child: ElevatedButton.icon(onPressed: ()async{setState((){_chats.add({'who':'Tú','text':'🖼️ $l','image':picked!.name,'time':'Ahora'});loading=true;});String r=await askGemini(l,cur,image: picked);setState((){_chats.add({'who':cur,'text':'✅ $l: $r','time':'Ahora'});loading=false;});_save();},icon: Icon(ic,size:12),label: Text(l,style: const TextStyle(fontSize:9)),style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal:8,vertical:4),backgroundColor: cur.contains('Lucía')?Colors.pinkAccent:Colors.cyanAccent,foregroundColor: Colors.white)));
-  Future<void> _send() async{if(_msg.text.trim().isEmpty||loading) return;var t=_msg.text;setState((){_chats.add({'who':'Tú','text':t,'time':'Ahora'});loading=true;});_msg.clear();String r=await askGemini(t,cur,image: picked);try{await tts.setLanguage('es-ES');await tts.speak(r);}catch(_){}setState((){_chats.add({'who':cur,'text':r,'time':'Ahora'});loading=false;picked=null;});_save();}
-}
-
-class AjustesScreen extends StatefulWidget{final Function(String,String) onSave;final String userName;final String tone;const AjustesScreen({super.key,required this.onSave,required this.userName,required this.tone});@override State<AjustesScreen> createState()=>_AjustesScreenState();}
-class _AjustesScreenState extends State<AjustesScreen>{late TextEditingController nameCtrl;late String selTone;@override void initState(){super.initState();nameCtrl=TextEditingController(text: widget.userName);selTone=widget.tone;}@override Widget build(BuildContext context)=>SafeArea(child: ListView(padding: const EdgeInsets.all(16),children: [const Text('Ajustes • DialogAI v1 • Mimi 🐱',style: TextStyle(fontSize:18,fontWeight: FontWeight.bold)),const SizedBox(height:12),TextField(controller: nameCtrl,decoration: const InputDecoration(labelText:'اسمك',border: OutlineInputBorder())),const SizedBox(height:12),DropdownButtonFormField<String>(value: selTone,decoration: const InputDecoration(labelText:'أسلوب',border: OutlineInputBorder()),items: ['داعم','مضحك','مستقر','ذكي','رومانسي','مغامر'].map((e)=>DropdownMenuItem(value:e,child: Text(e))).toList(),onChanged: (v)=>setState(()=>selTone=v!)),const SizedBox(height:12),ElevatedButton(onPressed: (){widget.onSave(nameCtrl.text,selTone);ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم الحفظ! Mimi عاقل')));},child: const Text('حفظ')),const Divider(height:30),ListTile(leading: const Icon(Icons.memory,color: Colors.pinkAccent),title: const Text('ذاكرة Hive REAL'),subtitle: Text('${Hive.box('dialogai_v1_final').get('memories',defaultValue: []).length} ذكريات - Mimi 🐱')),ListTile(leading: const Icon(Icons.image,color: Colors.orange),title: const Text('صور: خلفية، أنمي، HD، باريس، فيديو'),subtitle: const Text('Gemini Vision ✅')),Container(padding: const EdgeInsets.all(12),decoration: BoxDecoration(color: Colors.green.withOpacity(0.15),borderRadius: BorderRadius.circular(12)),child: const Text('✅ متكامل: نفس منطق HTML + ذاكرة ما كتنساش',style: TextStyle(fontSize:11,color: Colors.green)))]));}
+    return Scaffold(
+      body: SafeArea(
+        child: Row(
+          children: [
+            // Sidebar - مثل HTML
+            if (MediaQuery.of(context).size.width > 700)
+              Container(
+                width: 330,
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [const Color(0xFF0F172A).withOpacity(0.9), const Color(0xFF111827).withOpacity(0.78)]), border: Border(left: BorderSide(color: Colors.white.withOpacity(0.04)))),
+                child: ListView(children: [
+                  Row(children: [Container(width: 38, height: 38, decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), gradient: const LinearGradient(colors: [Color(0xFF7C3AED), Color(0xFF22D3EE)])), child: const Icon(Icons.chat_bubble, size: 18)), const SizedBox(width: 12), const Text('Companion AI', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18))]),
+                  const SizedBox(height: 18),
+                  Container(padding: const EdgeInsets.all(14), decoration: BoxDecoration(color: Colors.white.withOpacity(0.04), borderRadius: BorderRadius.circular(18), border: Border.all(color: Colors.white.withOpacity(0.06))), child: Column(children: [
+                    Row(children: [CircleAvatar(radius: 27, backgroundColor: Colors.orange, child: const Text('😊', style: TextStyle(fontSize: 22))), const SizedBox(width: 12), Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(userName, style: const TextStyle(fontWeight: FontWeight.bold)), const Text('متصل الآن', style: TextStyle(fontSize: 11, color: Colors.white54))])]),
+                    const SizedBox(height: 12),
+                    _field('اسمك', TextField(controller: TextEditingController(text: userName), onChanged: (v) { userName = v.trim().isEmpty ? 'أنت' : v; save(); setState(() {}); }, decoration: _dec())),
+                    _field('أسلوب الصديق', DropdownButtonFormField<String>(value: tone, items: ['داعم', 'مضحك', 'مستقر', 'ذكي', 'رومانسي', 'مغامر'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(), onChanged: (v) { tone = v!; save(); setState(() {}); }, decoration: _dec())),
+                    _field('مستوى الطاقة', DropdownButtonFormField<String>(value: energy, items: ['هادئ', 'عادي', 'نشط', 'متحمس'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(), onChanged: (v) { energy = v!; save(); setState(() {}); }, decoration: _dec())),
+                  ])),
+                  const SizedBox(height: 14),
+                  Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: Colors.white.withOpacity(0.03), borderRadius: BorderRadius.circular(18), border: Border.all(color: Colors.white.withOpacity(0.06))), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('الذاكرة', style: TextStyle(fontSize: 11, color: Colors.white54, letterSpacing: 0.8)), const SizedBox(height: 8), ...memory.take(6).map((m) => Container(margin: const EdgeInsets.only(bottom: 8), padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: Colors.white.withOpacity(0.03), borderRadius: BorderRadius.circular(10), border: Border.all(color: Colors.white.withOpacity(0.04))), child: Text(m, style: const TextStyle(fontSize: 12))))])),
+                ]),
+              ),
+            // Main
+            Expanded(
+              child: Column(children: [
+                Container(padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 18), decoration: BoxDecoration(color: const Color(0xFF0F172A).withOpacity(0.28), border: Border(bottom: BorderSide(color: Colors.white.withOpacity(0.06)))), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                  Row(children: [Container(width: 10, height: 10, decoration: BoxDecoration(color: const Color(0xFF34D399), shape: BoxShape.circle, boxShadow: [BoxShadow(color: const Color(0xFF34D399).withOpacity(0.3), blurRadius: 8, spreadRadius: 3)])), const SizedBox(width: 12
